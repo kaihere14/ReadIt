@@ -65,12 +65,11 @@ export const githubCallBack = async (req, res) => {
       },
       {
         headers: {
-          Accept: "application/json", 
+          Accept: "application/json",
           "Content-Type": "application/json",
         },
       }
     );
-
 
     const accessToken = tokenRes.data.access_token;
 

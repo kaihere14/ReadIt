@@ -1,10 +1,61 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
+  const navigate = useNavigate();
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    const checkExistingToken = async () => {
+      const token = localStorage.getItem("accessToken");
+
+      if (token) {
+        try {
+          // Verify the existing token
+          const response = await fetch("http://localhost:3000/auth/verify", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            localStorage.setItem("user", JSON.stringify(data.user));
+            // Token is valid, redirect to home
+            navigate("/");
+            return;
+          } else {
+            // Token is invalid, clear it
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("user");
+          }
+        } catch (error) {
+          console.error("Token verification error:", error);
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("user");
+        }
+      }
+
+      setIsChecking(false);
+    };
+
+    checkExistingToken();
+  }, [navigate]);
+
   const handleGitHubLogin = () => {
     // Redirect to GitHub OAuth
-    window.location.href = "http://localhost:5000/api/auth/github";
+    window.location.href = "http://localhost:3000/auth/github";
   };
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
