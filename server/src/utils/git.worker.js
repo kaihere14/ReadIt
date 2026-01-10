@@ -30,27 +30,50 @@ export const connection = new IORedis({
   password: process.env.REDIS_PASSWORD,
   username: "default",
   maxRetriesPerRequest: null,
+  enableReadyCheck: true,
+  enableOfflineQueue: true,
+  keepAlive: 30000, // Send keepalive packets every 30s
   retryStrategy: (times) => {
-    if (times > 3) {
-      console.error(
-        "Redis connection failed after 3 retries. Stopping reconnection attempts."
-      );
-      return null; // Stop retrying
-    }
-    const delay = Math.min(times * 1000, 3000);
+    // Retry indefinitely for production stability
+    const delay = Math.min(times * 1000, 10000); // Max 10s delay
     console.log(`Retrying Redis connection in ${delay}ms (attempt ${times})`);
     return delay;
   },
+  reconnectOnError: (err) => {
+    const targetErrors = ["READONLY", "ECONNRESET", "ETIMEDOUT"];
+    if (targetErrors.some((e) => err.message.includes(e))) {
+      console.log("Reconnecting due to:", err.message);
+      return true; // Reconnect on these errors
+    }
+    return false;
+  },
   connectTimeout: 10000,
-  lazyConnect: true, // Don't connect immediately
+  lazyConnect: true,
 });
 
 connection.on("error", (err) => {
   console.error("Redis connection error:", err.message);
+  // Don't crash the server, just log the error
 });
 
 connection.on("connect", () => {
   console.log("Redis connected successfully");
+});
+
+connection.on("ready", () => {
+  console.log("Redis ready to accept commands");
+});
+
+connection.on("close", () => {
+  console.warn("Redis connection closed. Will attempt to reconnect...");
+});
+
+connection.on("reconnecting", (timeToReconnect) => {
+  console.log(`Reconnecting to Redis in ${timeToReconnect}ms...`);
+});
+
+connection.on("end", () => {
+  console.error("Redis connection ended permanently");
 });
 
 // Attempt to connect
