@@ -147,6 +147,49 @@ export const addRepoActivity = async (req, res) => {
   }
 };
 
+export const deactivateRepoActivity = async (req, res) => {
+  try {
+    const { repoId } = req.body;
+    const userId = req.userId;
+
+    const activeRepo = await ActiveRepo.findOne({ userId, repoId, active: true });
+
+    if (!activeRepo) {
+      return res.status(404).json({ message: "Active repository not found" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user || !user.githubAccessToken) {
+      return res.status(404).json({ message: "GitHub access token not found" });
+    }
+
+    const accessToken = decrypt(user.githubAccessToken);
+
+    try {
+      await axios.delete(
+        `https://api.github.com/repos/${activeRepo.repoOwner}/${activeRepo.repoName}/hooks/${activeRepo.webhookId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: "application/vnd.github+json",
+          },
+        }
+      );
+    } catch (error) {
+      console.error("Error deleting webhook:", error.message);
+      // Even if webhook deletion fails, we'll proceed to deactivate the repo in our DB
+    }
+
+    activeRepo.active = false;
+    await activeRepo.save();
+
+    res.status(200).json({ message: "Repository activity deactivated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deactivating repository activity", error });
+  }
+};
+
+
 export const githubWebhookHandler = async (req, res) => {
   try {
     // 1. Verify signature
