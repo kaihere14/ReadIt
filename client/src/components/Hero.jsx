@@ -4,136 +4,125 @@ import {
   Github,
   ArrowRight,
   FileText,
-  RefreshCw,
-  Sparkles,
+  Cpu,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
   const navigate = useNavigate();
+  
   return (
-    <section className="pt-40 pb-20 px-6">
-      <div className="max-w-4xl mx-auto text-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full text-xs font-medium text-emerald-700 mb-8"
-        >
-          <Sparkles size={14} /> Automate your documentation
-        </motion.div>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-6"
-        >
-          Your README,{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-slate-600 to-slate-400">
-            on Autopilot.
-          </span>
-        </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="text-lg text-slate-500 mb-10 max-w-2xl mx-auto leading-relaxed"
-        >
-          Stop wasting hours on boilerplate. We analyze your commits and
-          codebase to keep your documentation as fresh as your code.
-        </motion.p>
-
+    <section className="pt-48 pb-32 px-6 bg-white">
+      <div className="max-w-5xl mx-auto">
+        {/* Main headline */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20"
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="text-center mb-8"
         >
-          <button
-            onClick={() => navigate("/login")}
-            className="w-full sm:w-auto bg-slate-900 text-white px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition-all hover:shadow-xl group"
-          >
-            <Github size={20} />
-            Connect GitHub
-            <ArrowRight
-              size={18}
-              className="group-hover:translate-x-1 transition-transform"
-            />
-          </button>
+          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-slate-900 mb-8 leading-[1.1]">
+            Your README,
+            <br />
+            <span className="text-slate-900">on Autopilot.</span>
+          </h1>
         </motion.div>
 
-        {/* Visual Flow with Animated Paths */}
-        <div className="flex items-center justify-center gap-4 md:gap-12">
+        {/* Subtext */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          className="text-xl md:text-2xl text-slate-600 mb-12 max-w-3xl mx-auto leading-relaxed text-center font-light"
+        >
+          Stop wasting hours on boilerplate. ReadmeAI analyzes your code and commits to keep documentation as fresh as your codebase.
+        </motion.p>
+
+        {/* CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          className="flex justify-center mb-24"
+        >
+          <motion.button
+            onClick={() => navigate("/login")}
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-slate-900 text-white px-8 py-4 rounded-xl font-semibold text-lg flex items-center gap-3 hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl group"
+          >
+            <Github size={22} />
+            Connect GitHub
+            <motion.div
+              className="overflow-hidden"
+              initial={{ width: 0 }}
+              whileHover={{ width: "auto" }}
+            >
+              <ArrowRight
+                size={20}
+                className="group-hover:translate-x-0 -translate-x-1 transition-transform"
+              />
+            </motion.div>
+          </motion.button>
+        </motion.div>
+
+        {/* Visual Flow - Minimal and clean */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="flex items-center justify-center gap-8 md:gap-16"
+        >
           {[
-            { icon: <Github />, label: "Your Repo" },
-            {
-              icon: <RefreshCw className="animate-spin-slow" />,
-              label: "AI Analysis",
-              primary: true,
-            },
-            {
-              icon: <FileText className="text-emerald-500" />,
-              label: "README.md",
-              success: true,
-            },
+            { icon: Github, label: "Repository", color: "slate" },
+            { icon: Cpu, label: "Analysis", color: "slate", primary: true },
+            { icon: FileText, label: "README.md", color: "slate" },
           ].map((item, idx, arr) => (
             <React.Fragment key={idx}>
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.2 }}
-                className="flex flex-col items-center gap-3"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ 
+                  duration: 0.5, 
+                  delay: 0.5 + idx * 0.15,
+                  ease: [0.22, 1, 0.36, 1]
+                }}
+                className="flex flex-col items-center gap-4"
               >
-                <div
-                  className={`w-16 h-16 rounded-2xl border flex items-center justify-center shadow-sm ${
+                <motion.div
+                  whileHover={{ y: -4, scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  className={`w-20 h-20 rounded-2xl border-2 flex items-center justify-center transition-all ${
                     item.primary
-                      ? "bg-slate-900 text-white"
-                      : item.success
-                      ? "border-emerald-200 bg-emerald-50"
-                      : "bg-white border-slate-200"
+                      ? "bg-slate-900 border-slate-900 text-white shadow-lg"
+                      : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
                   }`}
                 >
-                  {item.icon}
-                </div>
-                <span
-                  className={`text-[10px] font-bold uppercase tracking-widest ${
-                    item.success ? "text-emerald-600" : "text-slate-400"
-                  }`}
-                >
+                  <item.icon size={32} strokeWidth={1.5} />
+                </motion.div>
+                <span className="text-sm font-medium text-slate-500 tracking-wide">
                   {item.label}
                 </span>
               </motion.div>
               {idx < arr.length - 1 && (
                 <motion.div
-                  initial={{ width: 0 }}
-                  whileInView={{ width: "auto" }}
-                  viewport={{ once: true }}
-                  className="text-slate-200 hidden md:block"
+                  initial={{ scaleX: 0, opacity: 0 }}
+                  animate={{ scaleX: 1, opacity: 1 }}
+                  transition={{ 
+                    duration: 0.6, 
+                    delay: 0.7 + idx * 0.15,
+                    ease: [0.22, 1, 0.36, 1]
+                  }}
+                  className="hidden md:block"
+                  style={{ originX: 0 }}
                 >
-                  <ArrowRight size={24} />
+                  <div className="w-12 h-[2px] bg-slate-200" />
                 </motion.div>
               )}
             </React.Fragment>
           ))}
-        </div>
+        </motion.div>
       </div>
-
-      {/* CSS for custom animations */}
-      <style jsx>{`
-        @keyframes spin-slow {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-        .animate-spin-slow {
-          animation: spin-slow 8s linear infinite;
-        }
-      `}</style>
     </section>
   );
 };

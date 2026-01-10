@@ -1,56 +1,41 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Clock, RefreshCw, FileText, AlertCircle } from "lucide-react";
-
-const fadeIn = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 },
-};
-
-const staggerContainer = {
-  animate: { transition: { staggerChildren: 0.1 } },
-};
 
 const PainPoints = () => {
   const painPoints = [
-    {
-      icon: <Clock className="text-orange-500" />,
-      text: "Writing READMEs is repetitive and time-consuming",
-    },
-    {
-      icon: <RefreshCw className="text-blue-500" />,
-      text: "READMEs go out of sync as code evolves",
-    },
-    {
-      icon: <FileText className="text-emerald-500" />,
-      text: "New repositories often ship without documentation",
-    },
-    {
-      icon: <AlertCircle className="text-red-500" />,
-      text: "Good documentation is important, but rarely prioritized",
-    },
+    "Writing READMEs is repetitive and time-consuming",
+    "READMEs go out of sync as code evolves",
+    "New repositories ship undocumented",
+    "Documentation is important, but rarely prioritized",
   ];
 
   return (
-    <section className="py-24 bg-slate-50 border-y border-slate-100 px-6">
-      <div className="max-w-7xl mx-auto">
+    <section className="py-32 bg-slate-50/50 px-6">
+      <div className="max-w-4xl mx-auto">
         <motion.div
-          initial="initial"
-          whileInView="animate"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
-          variants={staggerContainer}
-          className="grid md:grid-cols-2 gap-4 max-w-4xl mx-auto"
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="space-y-6"
         >
-          {painPoints.map((item, i) => (
+          {painPoints.map((text, i) => (
             <motion.div
               key={i}
-              variants={fadeIn}
-              whileHover={{ y: -5 }}
-              className="flex items-center gap-4 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-all"
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ 
+                duration: 0.5, 
+                delay: i * 0.1,
+                ease: [0.22, 1, 0.36, 1]
+              }}
+              className="flex items-start gap-4 py-6 border-b border-slate-200 last:border-b-0"
             >
-              <div className="p-2 bg-slate-50 rounded-lg">{item.icon}</div>
-              <p className="font-semibold text-slate-700">{item.text}</p>
+              <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-slate-400 mt-3" />
+              <p className="text-xl md:text-2xl text-slate-600 font-light leading-relaxed">
+                {text}
+              </p>
             </motion.div>
           ))}
         </motion.div>
