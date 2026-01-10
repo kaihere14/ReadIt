@@ -211,6 +211,7 @@ export const githubWebhookHandler = async (req, res) => {
 
     const repoId = payload.repository.id;
     const commitSha = payload.after;
+    const commitMessage = payload.head_commit?.message || "";
 
     // 4. Check active repo
     const activeRepo = await ActiveRepo.findOne({
@@ -222,12 +223,18 @@ export const githubWebhookHandler = async (req, res) => {
       return res.status(200).send("Repo not active");
     }
 
-    // 5. Loop prevention
+    // 5. Loop prevention - ignore bot commits
+    if (commitMessage.includes("[skip ci]") || commitMessage.includes("auto-update README")) {
+      console.log(`Ignoring bot commit: ${commitSha}`);
+      return res.status(200).send("Bot commit ignored");
+    }
+
+    // 6. Check if already processed
     if (activeRepo.lastProcessedSha === commitSha) {
       return res.status(200).send("Already processed");
     }
 
-    // TODO: README generation pipeline
+    // 7. Queue README generation
     console.log(`Received push event for repo ${activeRepo.repoFullName} at commit ${commitSha}`);
     readmeQueue.add("generate-readme", {
       userId: activeRepo.userId,
@@ -239,7 +246,7 @@ export const githubWebhookHandler = async (req, res) => {
       commitSha: commitSha,
     });
 
-    // 6. Update last processed commit
+    // 8. Update last processed commit
     activeRepo.lastProcessedSha = commitSha;
     await activeRepo.save();
 

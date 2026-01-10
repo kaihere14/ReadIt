@@ -15,6 +15,11 @@ const activeRepoSchema = new Schema({
     webhookId: { type: Number, required: true },
     lastUpdated: { type: Date, default: Date.now },
 
+    // README generation tracking
+    lastReadmeGeneratedAt: { type: Date, default: null },
+    readmeGenerationCount: { type: Number, default: 0 },
+    lastReadmeSha: { type: String, default: null },
+
 }, { timestamps: true });
 
 const ActiveRepo = model('ActiveRepo', activeRepoSchema);
