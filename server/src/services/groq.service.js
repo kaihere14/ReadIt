@@ -1,10 +1,10 @@
 import axios from "axios";
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
 
 /**
- * Generate README content using Google Gemini API
+ * Generate README content using Groq API
  * @param {Object} context - Context object containing repository information
  * @param {string} context.repoName - Repository name
  * @param {string} context.repoOwner - Repository owner
@@ -16,64 +16,62 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
  */
 export async function generateReadme(context) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     
     if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is not configured in environment variables");
+      throw new Error("GROQ_API_KEY is not configured in environment variables");
     }
 
     const systemPrompt = buildSystemPrompt();
     const userPrompt = buildUserPrompt(context);
 
-    // Combine system and user prompts for Gemini
-    const combinedPrompt = `${systemPrompt}\n\n${userPrompt}`;
-
     const response = await axios.post(
-      `${GEMINI_API_URL}/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+      GROQ_API_URL,
       {
-        contents: [
+        model: GROQ_MODEL,
+        messages: [
           {
-            parts: [
-              {
-                text: combinedPrompt,
-              },
-            ],
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: userPrompt,
           },
         ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 8192,
-        },
+        temperature: 0.7,
+        max_tokens: 8192,
       },
       {
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
         },
         timeout: 60000, // 60 second timeout
       }
     );
 
-    if (!response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-      throw new Error("Invalid response from Gemini API");
+    if (!response.data?.choices?.[0]?.message?.content) {
+      throw new Error("Invalid response from Groq API");
     }
 
-    return response.data.candidates[0].content.parts[0].text;
+    return response.data.choices[0].message.content;
   } catch (error) {
     if (error.response) {
-      // Gemini API error
-      console.error("Gemini API Error:", {
+      // Groq API error
+      console.error("Groq API Error:", {
         status: error.response.status,
         data: error.response.data,
       });
       throw new Error(
-        `Gemini API error: ${error.response.status} - ${
+        `Groq API error: ${error.response.status} - ${
           error.response.data?.error?.message || "Unknown error"
         }`
       );
     } else if (error.request) {
       // Network error
-      console.error("Network error calling Gemini API:", error.message);
-      throw new Error("Network error: Unable to reach Gemini API");
+      console.error("Network error calling Groq API:", error.message);
+      throw new Error("Network error: Unable to reach Groq API");
     } else {
       // Other errors
       console.error("Error generating README:", error.message);
@@ -83,7 +81,7 @@ export async function generateReadme(context) {
 }
 
 /**
- * Build system prompt for Gemini API
+ * Build system prompt for Groq API
  * @returns {string} System prompt
  */
 function buildSystemPrompt() {

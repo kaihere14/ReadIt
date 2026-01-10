@@ -4,7 +4,7 @@ import { Worker } from "bullmq";
 import User from "../schema/user.schema.js";
 import ActiveRepo from "../schema/activeRepo.js";
 import { decrypt } from "../controllers/oauthcontroller.js";
-import { generateReadme } from "../services/gemini.service.js";
+import { generateReadme } from "../services/groq.service.js";
 import {
   getCommit,
   getRepoTree,
@@ -207,7 +207,7 @@ const aihandler = async (data) => {
       `[AI Handler] Fetched ${changedFilesContent.length} changed files`
     );
 
-    // Step 7: Build context for Gemini API
+    // Step 7: Build context for Groq API
     console.log(`[AI Handler] Building context for README generation`);
     let context = buildReadmeContext({
       repoName,
@@ -238,12 +238,12 @@ const aihandler = async (data) => {
       context = optimizeContext(context, 8000);
     }
 
-    // Step 8: Generate README using Gemini API
-    console.log(`[AI Handler] Calling Gemini API to generate README`);
+    // Step 8: Generate README using Groq API
+    console.log(`[AI Handler] Calling Groq API to generate README`);
     const generatedReadme = await generateReadme(context);
 
     if (!generatedReadme || generatedReadme.trim().length === 0) {
-      throw new Error("Gemini API returned empty README");
+      throw new Error("Groq API returned empty README");
     }
 
     console.log(
