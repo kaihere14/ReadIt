@@ -3,6 +3,7 @@ import { decrypt } from "./oauthcontroller.js";
 import axios from "axios";
 import ActiveRepo from "../schema/activeRepo.js";
 import crypto from "node:crypto";
+import { readmeQueue } from "../utils/git.worker.js";
 
 export function verifyGithubSignature(req) {
   const signature = req.headers["x-hub-signature-256"];
@@ -228,7 +229,15 @@ export const githubWebhookHandler = async (req, res) => {
 
     // TODO: README generation pipeline
     console.log(`Received push event for repo ${activeRepo.repoFullName} at commit ${commitSha}`);
-
+    readmeQueue.add("generate-readme", {
+      userId: activeRepo.userId,
+      repoId: activeRepo.repoId,
+      repoName: activeRepo.repoName,
+      repoFullName: activeRepo.repoFullName,
+      repoOwner: activeRepo.repoOwner,
+      defaultBranch: activeRepo.defaultBranch,
+      commitSha: commitSha,
+    });
 
     // 6. Update last processed commit
     activeRepo.lastProcessedSha = commitSha;

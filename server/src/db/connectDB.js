@@ -3,7 +3,11 @@ import User from "../schema/user.schema.js";
 
 export const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000,
+    });
     console.log("MongoDB connected successfully");
 
     // Drop the email index if it exists (from old schema)
@@ -19,6 +23,6 @@ export const connectDB = async () => {
     }
   } catch (error) {
     console.error("MongoDB connection error:", error);
-    process.exit(1);
+    throw error;
   }
 };
