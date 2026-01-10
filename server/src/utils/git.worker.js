@@ -143,6 +143,7 @@ const aihandler = async (data) => {
     const readmeFileName = process.env.README_FILE_NAME || "README.md";
     let existingReadme = null;
     let existingReadmeSha = null;
+    let isReadmeGood = false;
 
     try {
       const readmeData = await getFileContent(
@@ -156,8 +157,12 @@ const aihandler = async (data) => {
       if (readmeData) {
         existingReadme = readmeData.content;
         existingReadmeSha = readmeData.sha;
+        
+        // Check if README is substantial and well-formed
+        isReadmeGood = isReadmeSubstantial(existingReadme);
+        
         console.log(
-          `[AI Handler] Found existing README (${readmeData.size} bytes)`
+          `[AI Handler] Found existing README (${readmeData.size} bytes) - Quality: ${isReadmeGood ? 'GOOD' : 'POOR'}`
         );
       }
     } catch (error) {
@@ -166,46 +171,91 @@ const aihandler = async (data) => {
       );
     }
 
-    // Step 6: Fetch changed files content (only relevant files)
-    console.log(`[AI Handler] Fetching changed files content`);
-    const changedFilesContent = [];
-    const relevantFiles = commitData.files.filter(
-      (file) =>
-        shouldIncludeFile(file.filename) &&
-        (file.status === "added" || file.status === "modified")
-    );
-
-    // Limit to first 10 files to avoid context overflow
-    const filesToFetch = relevantFiles.slice(0, 10);
-
-    for (const file of filesToFetch) {
+    // Step 6: Fetch files based on README quality
+    let changedFilesContent = [];
+    
+    if (!isReadmeGood) {
+      // README doesn't exist or is poor quality - scan entire repo
+      console.log(`[AI Handler] README is missing/poor - scanning entire repository`);
+      
       try {
-        const fileData = await getFileContent(
-          accessToken,
-          repoOwner,
-          repoName,
-          file.filename,
-          defaultBranch
-        );
+        const treeData = await getRepoTree(accessToken, repoOwner, repoName, defaultBranch);
+        
+        // Get important files from the repo
+        const importantFiles = getImportantFiles(treeData.tree);
+        
+        // Fetch content of important files (limit to 20 for full scan)
+        const filesToFetch = importantFiles.slice(0, 20);
+        
+        for (const filePath of filesToFetch) {
+          try {
+            const fileData = await getFileContent(
+              accessToken,
+              repoOwner,
+              repoName,
+              filePath,
+              defaultBranch
+            );
 
-        if (fileData) {
-          changedFilesContent.push({
-            path: file.filename,
-            content: truncateContent(fileData.content, 100),
-            language: getFileLanguage(file.filename),
-            status: file.status,
-          });
+            if (fileData) {
+              changedFilesContent.push({
+                path: filePath,
+                content: truncateContent(fileData.content, 150),
+                language: getFileLanguage(filePath),
+                status: "scanned",
+              });
+            }
+          } catch (error) {
+            console.warn(`[AI Handler] Could not fetch file ${filePath}: ${error.message}`);
+          }
         }
+        
+        console.log(`[AI Handler] Scanned ${changedFilesContent.length} important files from repository`);
       } catch (error) {
-        console.warn(
-          `[AI Handler] Could not fetch file ${file.filename}: ${error.message}`
-        );
+        console.error(`[AI Handler] Error scanning repository: ${error.message}`);
       }
-    }
+    } else {
+      // README exists and is good - only fetch changed files
+      console.log(`[AI Handler] README is good - fetching only changed files`);
+      
+      const relevantFiles = commitData.files.filter(
+        (file) =>
+          shouldIncludeFile(file.filename) &&
+          (file.status === "added" || file.status === "modified")
+      );
 
-    console.log(
-      `[AI Handler] Fetched ${changedFilesContent.length} changed files`
-    );
+      // Limit to first 10 files for incremental updates
+      const filesToFetch = relevantFiles.slice(0, 10);
+
+      for (const file of filesToFetch) {
+        try {
+          const fileData = await getFileContent(
+            accessToken,
+            repoOwner,
+            repoName,
+            file.filename,
+            defaultBranch
+          );
+
+          if (fileData) {
+            changedFilesContent.push({
+              path: file.filename,
+              content: truncateContent(fileData.content, 100),
+              language: getFileLanguage(file.filename),
+              status: file.status,
+            });
+          }
+        } catch (error) {
+          console.warn(
+            `[AI Handler] Could not fetch file ${file.filename}: ${error.message}`
+          );
+        }
+      }
+
+      console.log(
+        `[AI Handler] Fetched ${changedFilesContent.length} changed files`
+      );
+    }
 
     // Step 7: Build context for Groq API
     console.log(`[AI Handler] Building context for README generation`);
@@ -296,4 +346,161 @@ const aihandler = async (data) => {
     // Log error but don't throw - let BullMQ handle retries
     throw error;
   }
+}
+
+/**
+ * Check if README is substantial and well-formed
+ * @param {string} readme - README content
+ * @returns {boolean} True if README is good quality
+ */
+function isReadmeSubstantial(readme) {
+  if (!readme || readme.trim().length === 0) {
+    return false;
+  }
+
+  // Check minimum length (at least 200 characters for a decent README)
+  if (readme.length < 200) {
+    return false;
+  }
+
+  // Check for common README sections (at least 2 should be present)
+  const commonSections = [
+    /##?\s*(about|overview|description|introduction)/i,
+    /##?\s*(installation|install|setup|getting started)/i,
+    /##?\s*(usage|how to use|examples)/i,
+    /##?\s*(features|functionality)/i,
+    /##?\s*(api|documentation|docs)/i,
+    /##?\s*(contributing|contribution)/i,
+    /##?\s*(license)/i,
+  ];
+
+  const sectionsFound = commonSections.filter((pattern) =>
+    pattern.test(readme)
+  ).length;
+
+  // If it has at least 2 sections, consider it good
+  if (sectionsFound >= 2) {
+    return true;
+  }
+
+  // Check if it's just a placeholder or very basic
+  const placeholderPatterns = [
+    /^#\s*[\w-]+\s*$/m, // Just a title
+    /TODO/i,
+    /coming soon/i,
+    /under construction/i,
+    /work in progress/i,
+  ];
+
+  const hasPlaceholder = placeholderPatterns.some((pattern) =>
+    pattern.test(readme)
+  );
+
+  // If it has placeholder text and few sections, it's not good
+  if (hasPlaceholder && sectionsFound < 2) {
+    return false;
+  }
+
+  // Check for code blocks or examples (indicates detailed documentation)
+  const hasCodeBlocks = /```[\s\S]*?```/.test(readme);
+  
+  // If it has code blocks and reasonable length, it's probably good
+  if (hasCodeBlocks && readme.length > 300) {
+    return true;
+  }
+
+  // Default: if it's long enough and has some structure, consider it okay
+  return readme.length > 500 && sectionsFound >= 1;
+}
+
+/**
+ * Get important files from repository tree
+ * @param {Array} tree - Repository tree
+ * @returns {Array} Array of important file paths
+ */
+function getImportantFiles(tree) {
+  const importantFiles = [];
+
+  // Priority order for file types
+  const priorities = {
+    // Package/config files (highest priority)
+    "package.json": 1,
+    "package-lock.json": 1,
+    "requirements.txt": 1,
+    "setup.py": 1,
+    "Cargo.toml": 1,
+    "go.mod": 1,
+    "pom.xml": 1,
+    "build.gradle": 1,
+    "composer.json": 1,
+    
+    // Main entry points
+    "index.js": 2,
+    "index.ts": 2,
+    "main.js": 2,
+    "main.ts": 2,
+    "main.py": 2,
+    "app.js": 2,
+    "app.ts": 2,
+    "server.js": 2,
+    "server.ts": 2,
+    
+    // Config files
+    ".env.example": 3,
+    "config.js": 3,
+    "config.json": 3,
+    
+    // Documentation
+    "CHANGELOG.md": 4,
+    "CONTRIBUTING.md": 4,
+  };
+
+  // Patterns for important directories
+  const importantDirPatterns = [
+    /^src\/.*\.(js|ts|jsx|tsx|py|java|go|rs)$/,
+    /^lib\/.*\.(js|ts|jsx|tsx|py|java|go|rs)$/,
+    /^app\/.*\.(js|ts|jsx|tsx|py|java|go|rs)$/,
+    /^api\/.*\.(js|ts|jsx|tsx|py|java|go|rs)$/,
+    /^routes\/.*\.(js|ts|jsx|tsx|py|java|go|rs)$/,
+    /^controllers\/.*\.(js|ts|jsx|tsx|py|java|go|rs)$/,
+    /^models\/.*\.(js|ts|jsx|tsx|py|java|go|rs)$/,
+    /^services\/.*\.(js|ts|jsx|tsx|py|java|go|rs)$/,
+    /^utils\/.*\.(js|ts|jsx|tsx|py|java|go|rs)$/,
+    /^components\/.*\.(js|ts|jsx|tsx)$/,
+    /^pages\/.*\.(js|ts|jsx|tsx)$/,
+  ];
+
+  // Categorize files
+  const categorized = tree
+    .filter((item) => item.type === "blob")
+    .map((item) => {
+      const filename = item.path.split("/").pop();
+      const priority = priorities[filename] || 999;
+      
+      // Check if it matches important directory patterns
+      const matchesPattern = importantDirPatterns.some((pattern) =>
+        pattern.test(item.path)
+      );
+
+      return {
+        path: item.path,
+        priority,
+        matchesPattern,
+      };
+    })
+    .filter((item) => {
+      // Include if it has a priority or matches a pattern
+      return item.priority < 999 || item.matchesPattern;
+    })
+    .sort((a, b) => {
+      // Sort by priority first, then by pattern match
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority;
+      }
+      if (a.matchesPattern && !b.matchesPattern) return -1;
+      if (!a.matchesPattern && b.matchesPattern) return 1;
+      return 0;
+    });
+
+  return categorized.map((item) => item.path);
 };
