@@ -48,7 +48,7 @@ export async function generateReadme(context) {
             },
           ],
           temperature: 0.4,
-          max_tokens: 32768,
+          max_tokens: 8000,
         },
         {
           headers: {
