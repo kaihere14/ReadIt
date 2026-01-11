@@ -16,70 +16,104 @@ const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
  * @returns {Promise<string>} Generated README content
  */
 export async function generateReadme(context) {
-  try {
-    const apiKey = process.env.GROQ_API_KEY;
+  // Fallback API keys
+  const apiKeys = [
+    process.env.GROQ_API_KEY1,process.env.GROQ_API_KEY2,process.env.GROQ_API_KEY3
+  ];
 
-    if (!apiKey) {
-      throw new Error(
-        "GROQ_API_KEY is not configured in environment variables"
-      );
-    }
+  const systemPrompt = buildSystemPrompt();
+  const userPrompt = buildUserPrompt(context);
 
-    const systemPrompt = buildSystemPrompt();
-    const userPrompt = buildUserPrompt(context);
+  let lastError = null;
 
-    const response = await axios.post(
-      GROQ_API_URL,
-      {
-        model: GROQ_MODEL,
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-          {
-            role: "user",
-            content: userPrompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 8192,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+  // Try each API key in sequence
+  for (let i = 0; i < apiKeys.length; i++) {
+    const apiKey = apiKeys[i];
+
+    try {
+      console.log(`Attempting request with API key ${i + 1}/${apiKeys.length}`);
+
+      const response = await axios.post(
+        GROQ_API_URL,
+        {
+          model: GROQ_MODEL,
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt,
+            },
+            {
+              role: "user",
+              content: userPrompt,
+            },
+          ],
+          temperature: 0.4,
+          max_tokens: 32768,
         },
-        timeout: 60000, // 60 second timeout
-      }
-    );
-
-    if (!response.data?.choices?.[0]?.message?.content) {
-      throw new Error("Invalid response from Groq API");
-    }
-
-    return response.data.choices[0].message.content;
-  } catch (error) {
-    if (error.response) {
-      // Groq API error
-      console.error("Groq API Error:", {
-        status: error.response.status,
-        data: error.response.data,
-      });
-      throw new Error(
-        `Groq API error: ${error.response.status} - ${
-          error.response.data?.error?.message || "Unknown error"
-        }`
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          timeout: 60000, // 60 second timeout
+        }
       );
-    } else if (error.request) {
-      // Network error
-      console.error("Network error calling Groq API:", error.message);
-      throw new Error("Network error: Unable to reach Groq API");
-    } else {
-      // Other errors
-      console.error("Error generating README:", error.message);
-      throw error;
+
+      if (!response.data?.choices?.[0]?.message?.content) {
+        throw new Error("Invalid response from Groq API");
+      }
+
+      console.log(`Successfully generated README with API key ${i + 1}`);
+      return response.data.choices[0].message.content;
+    } catch (error) {
+      lastError = error;
+
+      if (error.response) {
+        // Groq API error
+        console.error(`Groq API Error with key ${i + 1}:`, {
+          status: error.response.status,
+          data: error.response.data,
+        });
+
+        // If it's a rate limit or auth error, try next key
+        if (error.response.status === 429 || error.response.status === 401) {
+          console.log(
+            `Key ${i + 1} failed (${error.response.status}), trying next key...`
+          );
+          continue;
+        }
+
+        // For other API errors, throw immediately
+        throw new Error(
+          `Groq API error: ${error.response.status} - ${
+            error.response.data?.error?.message || "Unknown error"
+          }`
+        );
+      } else if (error.request) {
+        // Network error - try next key
+        console.error(`Network error with key ${i + 1}:`, error.message);
+        console.log("Trying next key...");
+        continue;
+      } else {
+        // Other errors - throw immediately
+        console.error("Error generating README:", error.message);
+        throw error;
+      }
     }
+  }
+
+  // All keys failed
+  console.error("All API keys exhausted");
+  if (lastError?.response) {
+    throw new Error(
+      `All API keys failed. Last error: ${lastError.response.status} - ${
+        lastError.response.data?.error?.message || "Unknown error"
+      }`
+    );
+  } else if (lastError?.request) {
+    throw new Error("Network error: Unable to reach Groq API with any key");
+  } else {
+    throw new Error("Failed to generate README with all available API keys");
   }
 }
 
