@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { GitBranch, Lock, Unlock, Loader2 } from 'lucide-react';
+import { GitBranch, Lock, Unlock, Loader2, ExternalLink } from 'lucide-react';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -8,7 +8,15 @@ const RepoCard = ({ repo, showToggle = true, onToggle }) => {
   const [isActive, setIsActive] = useState(repo.activated);
   const [loading, setLoading] = useState(false);
 
-  const handleToggle = async () => {
+  const handleCardClick = () => {
+    // Open GitHub repository in new tab
+    const githubUrl = `https://github.com/${repo.full_name}`;
+    window.open(githubUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleToggle = async (e) => {
+    // Prevent card click when toggling
+    e.stopPropagation();
     setLoading(true);
     const token = localStorage.getItem("accessToken");
     if (!isActive) {
@@ -76,21 +84,23 @@ const RepoCard = ({ repo, showToggle = true, onToggle }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
-      className="bg-white border border-slate-200 rounded-xl p-6 transition-all duration-50 hover:border-slate-300"
+      onClick={handleCardClick}
+      className="bg-white border border-slate-200 rounded-xl p-6 transition-all duration-50 hover:border-slate-300 cursor-pointer group"
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <GitBranch size={16} className="text-slate-400 shrink-0" />
-            <h3 className="text-lg font-bold text-slate-900 truncate">
+            <h3 className="text-lg font-bold text-slate-900 truncate group-hover:text-slate-700 transition-colors">
               {repo.name}
             </h3>
+            <ExternalLink size={14} className="text-slate-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <p className="text-xs text-slate-500 truncate">{repo.full_name}</p>
         </div>
         
         {showToggle && (
-          <div className="flex items-center gap-2 ml-4">
+          <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
             {loading ? (
               <Loader2 size={20} className="text-slate-400 animate-spin" />
             ) : (
