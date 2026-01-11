@@ -5,6 +5,7 @@ import OauthVerify from "./pages/OauthVerify";
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
+import Logs from "./pages/Logs";
 
 const App = () => {
   return (
@@ -15,6 +16,7 @@ const App = () => {
         <Route path="/oauth-success" element={<OauthVerify />} />
         <Route path="/home" element={<Home />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/logs" element={<Logs />} />
       </Routes>
     </div>
   );

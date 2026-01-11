@@ -23,6 +23,7 @@ import {
   optimizeContext,
   validateContext,
 } from "./prompt.builder.js";
+import  UserLogModel  from "../schema/userLog.schema.js";
 
 export const connection = new IORedis({
   host: process.env.REDIS_HOST || "localhost",
@@ -92,6 +93,14 @@ new Worker(
   "readme-generation",
   async (job) => {
     console.log("Processing job:", job.data);
+    const userLog = await UserLogModel.create({
+          userId: job.data.userId,
+          repoName: job.data.repoName,
+          action: "README_GENERATION_STARTED",
+          status: "ongoing",
+        });
+    job.data.logId = userLog._id.toString();
+    console.log("Updated job data with logId:", job.data.logId);
     await aihandler(job.data);
   },
   {
@@ -190,6 +199,11 @@ const aihandler = async (data) => {
       console.log(
         `[AI Handler] No existing README found or error fetching: ${error.message}`
       );
+    }
+    const log = await UserLogModel.findById(data.logId);
+    if (log) {
+      log.action = "GITHUB_REPO_CONNECTED";
+      await log.save();
     }
 
     // Step 6: Analyze README depth to determine strategy
@@ -412,6 +426,14 @@ const aihandler = async (data) => {
       `[AI Handler] ✓ README generation completed for ${repoFullName}`
     );
 
+    // Update log to success
+    const successLog = await UserLogModel.findById(data.logId);
+    if (successLog) {
+      successLog.action = "README_GENERATION_SUCCESS";
+      successLog.status = "success";
+      await successLog.save();
+    }
+
     return {
       success: true,
       commitSha: commitResult.commit.sha,
@@ -423,6 +445,18 @@ const aihandler = async (data) => {
       error.message
     );
     console.error(error.stack);
+
+    // Update log to failed
+    try {
+      const errorLog = await UserLogModel.findById(data.logId);
+      if (errorLog) {
+        errorLog.action = "README_GENERATION_FAILED";
+        errorLog.status = "failed";
+        await errorLog.save();
+      }
+    } catch (logError) {
+      console.error("Failed to update error log:", logError.message);
+    }
 
     // Log error but don't throw - let BullMQ handle retries
     throw error;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, LogOut, Home, FileText } from "lucide-react";
+import { User, LogOut, Home, FileText, Activity } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -44,15 +44,11 @@ const AuthNavigation = () => {
           className="flex items-center gap-3 cursor-pointer group"
           onClick={() => navigate("/")}
         >
-          <motion.div 
+          <motion.div
             whileHover={{ rotate: 5, scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 15 }}
           >
-            <img 
-              src="/logo.svg" 
-              alt="DaemonDoc Logo" 
-              className="w-9 h-9"
-            />
+            <img src="/logo.svg" alt="DaemonDoc Logo" className="w-9 h-9" />
           </motion.div>
           <span className="font-semibold text-lg tracking-tight text-slate-900">
             DaemonDoc
@@ -72,8 +68,8 @@ const AuthNavigation = () => {
               whileTap={{ scale: 0.97 }}
               onClick={() => navigate("/home")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                location.pathname === "/home" 
-                  ? "bg-slate-100 text-slate-900" 
+                location.pathname === "/home"
+                  ? "bg-slate-100 text-slate-900"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
@@ -85,13 +81,26 @@ const AuthNavigation = () => {
               whileTap={{ scale: 0.97 }}
               onClick={() => navigate("/profile")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                location.pathname === "/profile" 
-                  ? "bg-slate-100 text-slate-900" 
+                location.pathname === "/profile"
+                  ? "bg-slate-100 text-slate-900"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
               <FileText size={16} strokeWidth={2} />
               <span>Active Repos</span>
+            </motion.button>
+            <motion.button
+              whileHover={{ backgroundColor: "rgb(248 250 252)" }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("/logs")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                location.pathname === "/logs"
+                  ? "bg-slate-100 text-slate-900"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Activity size={16} strokeWidth={2} />
+              <span>Activity Logs</span>
             </motion.button>
           </div>
 
@@ -147,9 +156,7 @@ const AuthNavigation = () => {
                         <p className="text-sm font-semibold text-slate-900 truncate">
                           {user?.githubUsername || "User"}
                         </p>
-                        <p className="text-xs text-slate-500">
-                          GitHub Account
-                        </p>
+                        <p className="text-xs text-slate-500">GitHub Account</p>
                       </div>
                     </div>
                   </div>
@@ -171,4 +178,3 @@ const AuthNavigation = () => {
 };
 
 export default AuthNavigation;
-

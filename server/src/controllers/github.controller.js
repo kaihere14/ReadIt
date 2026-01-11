@@ -4,6 +4,8 @@ import axios from "axios";
 import ActiveRepo from "../schema/activeRepo.js";
 import crypto from "node:crypto";
 import { readmeQueue } from "../utils/git.worker.js";
+import UserLogModel from "../schema/userLog.schema.js";
+
 
 export function verifyGithubSignature(req) {
   const signature = req.headers["x-hub-signature-256"];
@@ -152,7 +154,11 @@ export const deactivateRepoActivity = async (req, res) => {
   try {
     const { repoId } = req.body;
     const userId = req.userId;
-    const activeRepo = await ActiveRepo.findOne({ userId, repoId, active: true });
+    const activeRepo = await ActiveRepo.findOne({
+      userId,
+      repoId,
+      active: true,
+    });
 
     if (!activeRepo) {
       return res.status(404).json({ message: "Active repository not found" });
@@ -183,12 +189,15 @@ export const deactivateRepoActivity = async (req, res) => {
     activeRepo.active = false;
     await activeRepo.save();
 
-    res.status(200).json({ message: "Repository activity deactivated successfully" });
+    res
+      .status(200)
+      .json({ message: "Repository activity deactivated successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Error deactivating repository activity", error });
+    res
+      .status(500)
+      .json({ message: "Error deactivating repository activity", error });
   }
 };
-
 
 export const githubWebhookHandler = async (req, res) => {
   try {
@@ -223,7 +232,10 @@ export const githubWebhookHandler = async (req, res) => {
     }
 
     // 5. Loop prevention - ignore bot commits
-    if (commitMessage.includes("[skip ci]") || commitMessage.includes("auto-update README")) {
+    if (
+      commitMessage.includes("[skip ci]") ||
+      commitMessage.includes("auto-update README")
+    ) {
       console.log(`Ignoring bot commit: ${commitSha}`);
       return res.status(200).send("Bot commit ignored");
     }
@@ -234,7 +246,11 @@ export const githubWebhookHandler = async (req, res) => {
     }
 
     // 7. Queue README generation
-    console.log(`Received push event for repo ${activeRepo.repoFullName} at commit ${commitSha}`);
+    console.log(
+      `Received push event for repo ${activeRepo.repoFullName} at commit ${commitSha}`
+    );
+    
+
     readmeQueue.add("generate-readme", {
       userId: activeRepo.userId,
       repoId: activeRepo.repoId,
@@ -243,6 +259,7 @@ export const githubWebhookHandler = async (req, res) => {
       repoOwner: activeRepo.repoOwner,
       defaultBranch: activeRepo.defaultBranch,
       commitSha: commitSha,
+      
     });
 
     // 8. Update last processed commit
@@ -255,3 +272,18 @@ export const githubWebhookHandler = async (req, res) => {
     return res.status(500).send("Webhook error");
   }
 };
+
+
+export const fetchUserLogs = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const logs = await UserLogModel.find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    res.status(200).json({ logs });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching user logs", error });
+  }
+}
