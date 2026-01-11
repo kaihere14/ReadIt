@@ -4,7 +4,7 @@ import { GitBranch, Lock, Unlock, Loader2 } from 'lucide-react';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-const RepoCard = ({ repo, showToggle = true }) => {
+const RepoCard = ({ repo, showToggle = true, onToggle }) => {
   const [isActive, setIsActive] = useState(repo.activated);
   const [loading, setLoading] = useState(false);
 
@@ -29,6 +29,10 @@ const RepoCard = ({ repo, showToggle = true }) => {
         });
         if (response.ok) {
           setIsActive(true);
+          // Notify parent component to refresh the list
+          if (onToggle) {
+            onToggle();
+          }
         } else {
           const error = await response.json();
           alert(error.message || 'Failed to activate repository');
@@ -51,6 +55,10 @@ const RepoCard = ({ repo, showToggle = true }) => {
         });
         if (response.ok) {
           setIsActive(false);
+          // Notify parent component to refresh the list
+          if (onToggle) {
+            onToggle();
+          }
         } else {
           const error = await response.json();
           alert(error.message || 'Failed to deactivate repository');

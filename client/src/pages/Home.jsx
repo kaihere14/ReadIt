@@ -241,7 +241,7 @@ const Home = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <RepoCard repo={repo} showToggle={true} />
+                  <RepoCard repo={repo} showToggle={true} onToggle={fetchRepos} />
                 </motion.div>
               ))}
             </motion.div>
