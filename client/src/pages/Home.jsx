@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import AuthNavigation from "../components/AuthNavigation";
 import { useAuth } from "../context/AuthContext";
 import RepoCard from "../components/RepoCard";
-import { Loader2, Github, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, Github, AlertCircle, RefreshCw, Search, X } from "lucide-react";
 import SEO from "../components/SEO";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -15,6 +15,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("all"); // all, active, inactive
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchRepos();
@@ -48,9 +49,18 @@ const Home = () => {
   };
 
   const filteredRepos = repos.filter((repo) => {
-    if (filter === "active") return repo.activated;
-    if (filter === "inactive") return !repo.activated;
-    return true;
+    // Apply status filter
+    let matchesFilter = true;
+    if (filter === "active") matchesFilter = repo.activated;
+    if (filter === "inactive") matchesFilter = !repo.activated;
+    
+    // Apply search query
+    const matchesSearch = searchQuery === "" || 
+      repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      repo.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (repo.owner && repo.owner.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    return matchesFilter && matchesSearch;
   });
 
   const activeCount = repos.filter((r) => r.activated).length;
@@ -125,31 +135,73 @@ const Home = () => {
             </div>
           </motion.div>
 
-          {/* Filter Tabs */}
+          {/* Filter Tabs and Search Bar */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="flex items-center gap-2 mb-6 bg-white border border-slate-200 rounded-xl p-1 w-fit shadow-sm"
+            className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6"
           >
-            {[
-              { key: "all", label: "All Repositories" },
-              { key: "active", label: "Active" },
-              { key: "inactive", label: "Inactive" },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setFilter(tab.key)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  filter === tab.key
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+              {[
+                { key: "all", label: "All Repositories" },
+                { key: "active", label: "Active" },
+                { key: "inactive", label: "Inactive" },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setFilter(tab.key)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    filter === tab.key
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative flex-1 sm:max-w-md w-full">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search size={18} className="text-slate-400" />
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search repositories..."
+                className="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent shadow-sm transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center hover:bg-slate-50 rounded-r-xl transition-colors"
+                >
+                  <X size={18} className="text-slate-400 hover:text-slate-600" />
+                </button>
+              )}
+            </div>
           </motion.div>
+
+          {/* Results Counter */}
+          {!loading && !error && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mb-4 text-sm text-slate-600"
+            >
+              Showing <span className="font-semibold text-slate-900">{filteredRepos.length}</span> of{" "}
+              <span className="font-semibold text-slate-900">{repos.length}</span> repositories
+              {searchQuery && (
+                <span className="ml-1">
+                  matching "<span className="font-medium text-slate-900">{searchQuery}</span>"
+                </span>
+              )}
+            </motion.div>
+          )}
 
           {/* Content */}
           {loading ? (
