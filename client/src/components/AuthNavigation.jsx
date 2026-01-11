@@ -42,7 +42,7 @@ const AuthNavigation = () => {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="flex items-center gap-3 cursor-pointer group"
-          onClick={() => navigate("/home")}
+          onClick={() => navigate("/")}
         >
           <motion.div 
             whileHover={{ rotate: 5, scale: 1.05 }}
