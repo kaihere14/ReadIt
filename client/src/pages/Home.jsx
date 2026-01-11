@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import AuthNavigation from "../components/AuthNavigation";
 import { useAuth } from "../context/AuthContext";
 import RepoCard from "../components/RepoCard";
@@ -10,12 +11,20 @@ import SEO from "../components/SEO";
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 const Home = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [repos, setRepos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("all"); // all, active, inactive
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate("/login");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   useEffect(() => {
     fetchRepos();
